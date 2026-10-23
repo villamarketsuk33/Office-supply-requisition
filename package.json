@@ -1,0 +1,10 @@
+{
+  "name": "villa-market-supplies",
+  "version": "3.0.0",
+  "private": true,
+  "description": "GitHub Pages frontend, LINE login and Google Apps Script JSON API",
+  "scripts": {
+    "test": "node tests/backend.cjs && node tests/client.cjs",
+    "serve": "python3 -m http.server 8080"
+  }
+}
