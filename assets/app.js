@@ -21,40 +21,50 @@
   }
   function handleError(error){
     if(error.message==='SESSION_CHANGED')return;
+    if(error.code==='REGISTRATION_REQUIRED'){goRegistration(error);return;}
     toast(error.message||String(error),true);
-    if(/SESSION_EXPIRED|ACCESS_DENIED/.test(String(error.message)))signOut();
+    if(/SESSION_EXPIRED|ACCESS_DENIED/.test(String(error.message))){signOut();$('auth-status').textContent=error.message;}
   }
   async function run(task,saving=false){if(state.busy)return;state.busy=true;if(saving)$('busy-overlay').classList.remove('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=true);try{await task();}catch(e){handleError(e);}finally{state.busy=false;$('busy-overlay').classList.add('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=false);if($('restock-dialog').open)renderRestockProduct();}}
   function updateStats(){const available=state.inventory.filter(i=>i.balance>0).length;$('stat-inventory').innerHTML=num(available)+' <small>รายการ</small>';$('stat-orders').innerHTML=num(state.history.length)+' <small>ใบ</small>';$('stat-cart').innerHTML=num(state.cart.length)+' <small>รายการ</small>';$('nav-history-count').textContent=state.history.length;}
   async function loadWorkspace(){const [inventory,history]=await Promise.all([rpc('getInventoryData',state.user.token),rpc('getMyWithdrawalHistory',state.user.token)]);state.inventory=inventory;state.history=history;updateStats();}
   async function signIn(user){state.user=user;const persisted=VillaAPI.saveSession(user);if(!persisted)toast('เบราว์เซอร์ไม่อนุญาตให้จดจำการเข้าสู่ระบบ เมื่อปิดหน้านี้ต้องเข้าสู่ระบบใหม่',true);updateSessionClock();$('auth').classList.add('hidden');$('shell').classList.remove('hidden');$('user-name').textContent=user.name;$('user-dept').textContent=user.dept+' · '+user.role;$('user-avatar').textContent=user.name.slice(0,2).toUpperCase();$('greeting').textContent='สวัสดี, '+user.name;$('order-dept').textContent=user.dept;document.querySelectorAll('[data-role]').forEach(el=>el.classList.toggle('hidden',el.dataset.role==='admin'?!isAdmin():!isWarehouse()));renderCart();$('notice-dialog').showModal();await loadWorkspace();await navigate('requisition');}
-  function signOut(options={}){const token=state.user?.token;if(options.clear!==false)VillaAPI.clearSession();if(token&&options.revoke!==false)VillaAPI.request('logoutSession',token).catch(()=>{});state.user=null;document.body.classList.remove('printing-order');$('print-order').textContent='';state.editItems=[];state.editRequest=null;state.restockRequest=null;state.cart=[];state.history=[];state.weekly=[];state.selected=null;state.editing=null;state.orderRequest=null;state.inventory=[];document.querySelectorAll('dialog').forEach(d=>d.close());$('shell').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-status').textContent='เข้าสู่ระบบด้วยบัญชี LINE ของพนักงาน';$('product-search').value='';$('selection').classList.add('hidden');['history-search','history-from','history-to','inventory-search','edit-search','weekly-search','restock-product','restock-qty'].forEach(id=>$(id).value='');$('history-status').value='all';$('weekly-status').value='all';['history-content','inventory-content','daily-content','weekly-content','weekly-overview','edit-items','edit-info','product-results','edit-results','restock-product-info','legacy-name','legacy-employee','cart-items','user-name','user-dept','session-label','order-dept','greeting'].forEach(id=>$(id).textContent='');closeNav();}
+  function signOut(options={}){const token=state.user?.token;if(options.clear!==false)VillaAPI.clearSession();if(token&&options.revoke!==false)VillaAPI.request('logoutSession',token).catch(()=>{});state.user=null;document.body.classList.remove('printing-order');$('print-order').textContent='';state.editItems=[];state.editRequest=null;state.restockRequest=null;state.cart=[];state.history=[];state.weekly=[];state.selected=null;state.editing=null;state.orderRequest=null;state.inventory=[];document.querySelectorAll('dialog').forEach(d=>d.close());$('shell').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-status').textContent='ออกจากระบบแล้ว กดตรวจสอบบัญชีอีกครั้งเพื่อเข้าใช้งาน';$('line-login').classList.remove('hidden');$('line-login').disabled=false;$('auth-register').classList.add('hidden');$('auth-register').removeAttribute('href');$('product-search').value='';$('selection').classList.add('hidden');['history-search','history-from','history-to','inventory-search','edit-search','weekly-search','restock-product','restock-qty'].forEach(id=>$(id).value='');$('history-status').value='all';$('weekly-status').value='all';['history-content','inventory-content','daily-content','weekly-content','weekly-overview','edit-items','edit-info','product-results','edit-results','restock-product-info','legacy-name','legacy-employee','cart-items','user-name','user-dept','session-label','order-dept','greeting'].forEach(id=>$(id).textContent='');closeNav();}
   function updateSessionClock(){
     if(!state.user)return;
     const remaining=Number(state.user.expiresAt)-Date.now();
-    if(remaining<=0){signOut();$('auth-status').textContent='ครบ 1 ชั่วโมงแล้ว กรุณาเข้าสู่ระบบ LINE อีกครั้ง';return;}
+    if(remaining<=0){signOut();$('auth-status').textContent='ครบ 1 ชั่วโมงแล้ว กรุณาตรวจสอบบัญชีอีกครั้ง';return;}
     $('session-label').textContent='เซสชันเหลือ '+Math.ceil(remaining/60000)+' นาที';
   }
+  function goRegistration(error){
+    const destination=VillaAPI.registrationDestination(error);
+    signOut();
+    if(!destination){$('auth-status').textContent='ไม่พบลิงก์ลงทะเบียนที่ถูกต้อง กรุณาติดต่อผู้ดูแล';return;}
+    const link=$('auth-register');link.href=destination;link.classList.remove('hidden');
+    $('line-login').classList.add('hidden');
+    $('auth-status').textContent='ยังไม่พบทะเบียนพนักงาน กำลังพาไปลงทะเบียนที่เว็บ Customer Interaction…';
+    location.replace(destination);
+  }
   async function lineLogin(){
-    $('line-login').disabled=true;$('auth-status').textContent='กำลังยืนยันบัญชี LINE…';
-    try{const user=await VillaAPI.login();if(user)await signIn(user);}
-    finally{$('line-login').disabled=false;if(!state.user)$('auth-status').textContent='เข้าสู่ระบบด้วยบัญชี LINE ของพนักงาน';}
+    $('line-login').disabled=true;$('line-login').classList.add('hidden');$('auth-register').classList.add('hidden');
+    $('auth-status').textContent='กำลังตรวจสอบบัญชี LINE และข้อมูลพนักงาน…';
+    try{
+      const user=await VillaAPI.login();
+      if(user)await signIn(user);
+      else $('auth-status').textContent='กำลังเปิด LINE เพื่อยืนยันบัญชี…';
+    }catch(error){
+      if(error.code==='REGISTRATION_REQUIRED'){goRegistration(error);return;}
+      $('auth-status').textContent=error.message||'ตรวจสอบบัญชีไม่สำเร็จ กรุณาลองใหม่';
+      $('line-login').classList.remove('hidden');$('line-login').disabled=false;
+      throw error;
+    }
   }
   async function initializeAuth(){
-    try{
-      VillaAPI.validateConfig();
-      // LINE must finish initialization before reading or changing its callback URL.
-      const callback=VillaAPI.pendingLogin()||/[?&](?:code|liff\.state)=/.test(location.search)||/access_token=/.test(location.hash);
-      if(callback)await VillaAPI.initLine();
-      const saved=VillaAPI.readSession();
-      if(saved){
-        try{await signIn(await rpc('restoreSession',saved.token));return;}
-        catch(error){if(!/SESSION_EXPIRED|ACCESS_DENIED/.test(error.message))throw error;VillaAPI.clearSession();}
-      }
-      if(VillaAPI.pendingLogin())await lineLogin();
-      if(!state.user)$('auth-status').textContent='เข้าสู่ระบบด้วยบัญชี LINE ที่ลงทะเบียนพนักงานไว้';
-    }catch(error){$('auth-status').textContent=error.message;handleError(error);}
-    finally{$('line-login').disabled=false;}
+    try{VillaAPI.validateConfig();await lineLogin();}
+    catch(error){
+      $('auth-status').textContent=error.message||'ตรวจสอบบัญชีไม่สำเร็จ กรุณาลองใหม่';
+      $('line-login').classList.remove('hidden');$('line-login').disabled=false;handleError(error);
+    }
   }
   async function openLegacy(){
     const data=await rpc('getLegacyOwnerOptions',state.user.token);

@@ -36,7 +36,12 @@
     try { result = await response.json(); }
     catch (_) { throw new Error('API ไม่ได้ตอบกลับเป็น JSON กรุณาตรวจ URL /exec และ Deploy เวอร์ชันล่าสุด'); }
     if (!response.ok || !result || typeof result.ok !== 'boolean') throw new Error('API ตอบกลับไม่ถูกต้อง');
-    if (!result.ok) throw new Error(result.error || 'ทำรายการไม่สำเร็จ');
+    if (!result.ok) {
+      const error = new Error(result.error || 'ทำรายการไม่สำเร็จ');
+      error.code = result.code || '';
+      if (result.code === 'REGISTRATION_REQUIRED') error.registrationUrl = result.registrationUrl;
+      throw error;
+    }
     return result.data;
   }
   function readSession() {
@@ -53,6 +58,18 @@
     catch (_) { return false; }
   }
   function clearSession() { try { localStorage.removeItem(sessionKey); } catch (_) {} }
+  function registrationDestination(error) {
+    if (error?.code !== 'REGISTRATION_REQUIRED') return null;
+    try {
+      const url = new URL(error.registrationUrl);
+      if (url.protocol !== 'https:' || url.username || url.password) return null;
+      if (url.hostname === 'liff.line.me' && url.pathname.split('/')[1] === config.liffId) return null;
+      const pagePath = value => value.replace(/\/index\.html$/, '/');
+      if (url.origin === location.origin && pagePath(url.pathname) === pagePath(location.pathname)) return null;
+      return url.href;
+    } catch (_) {}
+    return null;
+  }
   async function initLine() {
     validateConfig();
     if (!window.liff) throw new Error('โหลด LINE SDK ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรช');
@@ -78,7 +95,9 @@
     pendingLogin(false);
     const idToken = liff.getIDToken();
     if (!idToken) throw new Error('LINE ไม่ส่ง ID token กรุณาเปิด scope openid ใน LIFF และเข้าสู่ระบบใหม่');
-    return request('loginWithLine', idToken);
+    // Resolve the current LINE account on every open. A valid matching app session
+    // is reused by the server with its original expiry, rather than extended.
+    return request('loginWithLine', {idToken, token:readSession()?.token || ''});
   }
-  window.VillaAPI = {request,validateConfig,readSession,saveSession,clearSession,initLine,login,pendingLogin,sessionKey};
+  window.VillaAPI = {request,validateConfig,readSession,saveSession,clearSession,initLine,login,pendingLogin,registrationDestination,sessionKey};
 })();
