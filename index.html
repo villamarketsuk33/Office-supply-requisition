@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#122c5c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/app.css?v=3.2.0">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -40,7 +40,7 @@
       <div class="mini-order" aria-hidden="true"><div class="mini-order-top"><div class="mini-order-icon"><svg><use href="#i-box"/></svg></div><div><strong style="font-size:12px">รายการเบิกพัสดุ</strong><p style="font-size:10px;color:#a2b7d9">ของใช้พร้อมสำหรับวันทำงาน</p></div></div><div class="mini-row"><span>เลือกสินค้า · ระบุจำนวน · ยืนยัน</span><span>จัดการได้ง่าย</span></div></div>
     </div><div class="auth-foot">VILLA MARKET &nbsp; / &nbsp; INTERNAL OPERATIONS</div>
   </section>
-  <section class="auth-form-wrap"><div class="auth-form"><div class="eyebrow muted">WELCOME BACK</div><h2>ยินดีต้อนรับ 👋</h2><p class="muted small">ใช้บัญชี LINE ที่ลงทะเบียนพนักงานไว้<br>เพื่อเบิกพัสดุและตรวจสอบรายการของคุณ</p><button id="line-login" class="btn btn-line" type="button" style="margin-top:28px" disabled><span class="line-mark" aria-hidden="true">LINE</span>เข้าสู่ระบบด้วย LINE</button><p id="auth-status" class="small muted" role="status" style="margin-top:16px">กำลังตรวจสอบการเข้าสู่ระบบ…</p><div class="auth-bottom">สำหรับพนักงาน Villa Market<br>จดจำการเข้าสู่ระบบเป็นเวลา 1 ชั่วโมง</div></div></section>
+  <section class="auth-form-wrap"><div class="auth-form"><div class="eyebrow muted">EMPLOYEE ACCESS</div><h2>ตรวจสอบข้อมูลพนักงาน</h2><p class="muted small">ระบบตรวจสอบบัญชี LINE ให้อัตโนมัติ<br>หากยังไม่มีทะเบียน จะพาไปลงทะเบียนที่เว็บเดิม</p><button id="line-login" class="btn btn-line hidden" type="button" style="margin-top:28px" disabled><span class="line-mark" aria-hidden="true">LINE</span>ตรวจสอบบัญชีอีกครั้ง</button><a id="auth-register" class="btn btn-primary hidden" style="width:100%;margin-top:16px">ไปหน้าลงทะเบียนพนักงาน</a><p id="auth-status" class="small muted" role="status" style="margin-top:16px">กำลังตรวจสอบบัญชี LINE และข้อมูลพนักงาน…</p><div class="auth-bottom">สำหรับพนักงาน Villa Market<br>จดจำการเข้าสู่ระบบเป็นเวลา 1 ชั่วโมง</div></div></section>
 </div>
 <div id="shell" class="shell hidden">
   <div id="scrim" class="scrim" data-action="close-nav"></div>
@@ -85,7 +85,7 @@
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
 <script src="config.js"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="assets/api.js"></script>
-<script src="assets/app.js"></script>
+<script src="assets/api.js?v=3.2.0"></script>
+<script src="assets/app.js?v=3.2.0"></script>
 </body>
 </html>
