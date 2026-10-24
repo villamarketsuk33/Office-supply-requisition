@@ -3,6 +3,7 @@
   const $=id=>document.getElementById(id), icon=name=>`<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const state={user:null,inventory:[],history:[],weekly:[],cart:[],selected:null,page:'requisition',editing:null,editItems:[],busy:false,pending:0,orderRequest:null,editRequest:null,restockRequest:null};
+  let freshLineLogin=false;
   const titles={requisition:'เบิกพัสดุ',history:'ประวัติการเบิกของฉัน',inventory:'สต็อกคงเหลือ',daily:'ใบจัดของประจำวัน',weekly:'วางแผนสั่งซื้อ'};
   const key=()=>typeof crypto.randomUUID==='function'?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2);
   const role=()=>String(state.user?.role||'').trim().toLowerCase();
@@ -49,11 +50,14 @@
     $('line-login').disabled=true;$('line-login').classList.add('hidden');$('auth-register').classList.add('hidden');
     $('auth-status').textContent='กำลังตรวจสอบบัญชี LINE และข้อมูลพนักงาน…';
     try{
-      const user=await VillaAPI.login();
+      const user=await VillaAPI.login({fresh:freshLineLogin});
+      freshLineLogin=false;$('line-login-label').textContent='ตรวจสอบบัญชีอีกครั้ง';
       if(user)await signIn(user);
       else $('auth-status').textContent='กำลังเปิด LINE เพื่อยืนยันบัญชี…';
     }catch(error){
       if(error.code==='REGISTRATION_REQUIRED'){goRegistration(error);return;}
+      freshLineLogin=['LINE_ACCESS_INVALID','LINE_ACCESS_MISSING','LINE_REAUTH_REQUIRED','LINE_PROFILE_REQUIRED','LINE_TOKEN_EXPIRED','LINE_TOKEN_INVALID','LINE_VERIFY_FAILED','LINE_OPENID_REQUIRED'].includes(error.code);
+      $('line-login-label').textContent=freshLineLogin?'ยืนยันกับ LINE ใหม่':'ตรวจสอบบัญชีอีกครั้ง';
       $('auth-status').textContent=error.message||'ตรวจสอบบัญชีไม่สำเร็จ กรุณาลองใหม่';
       $('line-login').classList.remove('hidden');$('line-login').disabled=false;
       throw error;

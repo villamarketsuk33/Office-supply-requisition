@@ -3,6 +3,7 @@
   'use strict';
   const config = window.VILLA_CONFIG || {};
   const sessionKey = 'villa-supplies:session:v3';
+  const renewalKey = 'villa-supplies:line-renewal:' + String(config.liffId || '');
   let lineReady;
   function validateConfig() {
     let url;
@@ -36,6 +37,8 @@
     try { result = await response.json(); }
     catch (_) { throw new Error('API ไม่ได้ตอบกลับเป็น JSON กรุณาตรวจ URL /exec และ Deploy เวอร์ชันล่าสุด'); }
     if (!response.ok || !result || typeof result.ok !== 'boolean') throw new Error('API ตอบกลับไม่ถูกต้อง');
+    if (action === 'loginWithLine' && args[0]?.accessToken && result.authProtocol !== 'line-access-v1')
+      throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version ให้ URL /exec แสดง version 3.3.0 ก่อนใช้งานหน้าเว็บชุดนี้');
     if (!result.ok) {
       const error = new Error(result.error || 'ทำรายการไม่สำเร็จ');
       error.code = result.code || '';
@@ -85,19 +88,62 @@
       return at > 0 && Date.now() - at < 600000;
     } catch (_) { return false; }
   }
-  async function login() {
-    await initLine();
-    if (!liff.isLoggedIn()) {
-      pendingLogin(true);
+  function authError(code, message) {
+    const error = new Error(code + ': ' + message);
+    error.code = code;
+    return error;
+  }
+  function clearRenewal() { try { sessionStorage.removeItem(renewalKey); } catch (_) {} }
+  function reserveRenewal(automatic) {
+    try {
+      const previous = Number(sessionStorage.getItem(renewalKey));
+      if (automatic && previous > 0 && Date.now() - previous < 600000) return false;
+      sessionStorage.setItem(renewalKey, String(Date.now()));
+      return true;
+    } catch (_) {
+      // A redirect cannot be bounded across reloads without working storage.
+      // Permit an explicit retry, and stop automatic redirects in this case.
+      return !automatic;
+    }
+  }
+  function renewLine(automatic) {
+    if (!reserveRenewal(automatic)) return false;
+    // Preserve the app session. The server reuses its original fixed expiry
+    // only after verifying that the current LINE account is the same employee.
+    if (liff.isLoggedIn()) liff.logout();
+    lineReady = null;
+    pendingLogin(true);
+    if (liff.isInClient()) {
+      location.replace('https://liff.line.me/' + config.liffId);
+    } else {
       liff.login({redirectUri:location.origin + location.pathname});
+    }
+    return true;
+  }
+  async function login(options = {}) {
+    await initLine();
+    if (options.fresh) {
+      renewLine(false);
       return null;
     }
+    if (!liff.isLoggedIn()) {
+      if (renewLine(true)) return null;
+      throw authError('LINE_REAUTH_REQUIRED', 'LINE ยังไม่ยืนยันบัญชีหลังเปิดใหม่ กรุณาตรวจสอบการอนุญาต LINE แล้วลองอีกครั้ง');
+    }
     pendingLogin(false);
-    const idToken = liff.getIDToken();
-    if (!idToken) throw new Error('LINE ไม่ส่ง ID token กรุณาเปิด scope openid ใน LIFF และเข้าสู่ระบบใหม่');
-    // Resolve the current LINE account on every open. A valid matching app session
-    // is reused by the server with its original expiry, rather than extended.
-    return request('loginWithLine', {idToken, token:readSession()?.token || ''});
+    try {
+      const accessToken = liff.getAccessToken();
+      if (!accessToken) throw authError('LINE_ACCESS_MISSING', 'LINE ยังไม่ส่งข้อมูลยืนยันบัญชี');
+      // Identity is obtained by the server from LINE, after verifying this
+      // token's channel and expiry. No cached ID token or client profile is used.
+      const user = await request('loginWithLine', {accessToken, token:readSession()?.token || ''});
+      clearRenewal();
+      return user;
+    } catch (error) {
+      if (['LINE_ACCESS_INVALID','LINE_ACCESS_MISSING'].includes(error.code) && renewLine(true)) return null;
+      if (['REGISTRATION_REQUIRED','ACCESS_DENIED'].includes(error.code)) clearRenewal();
+      throw error;
+    }
   }
   window.VillaAPI = {request,validateConfig,readSession,saveSession,clearSession,initLine,login,pendingLogin,registrationDestination,sessionKey};
 })();
