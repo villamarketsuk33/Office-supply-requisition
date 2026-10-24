@@ -24,11 +24,11 @@
     toast(error.message||String(error),true);
     if(/SESSION_EXPIRED|ACCESS_DENIED/.test(String(error.message)))signOut();
   }
-  async function run(task,saving=false){if(state.busy)return;state.busy=true;if(saving)$('busy-overlay').classList.remove('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=true);try{await task();}catch(e){handleError(e);}finally{state.busy=false;$('busy-overlay').classList.add('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=false);}}
+  async function run(task,saving=false){if(state.busy)return;state.busy=true;if(saving)$('busy-overlay').classList.remove('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=true);try{await task();}catch(e){handleError(e);}finally{state.busy=false;$('busy-overlay').classList.add('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=false);if($('restock-dialog').open)renderRestockProduct();}}
   function updateStats(){const available=state.inventory.filter(i=>i.balance>0).length;$('stat-inventory').innerHTML=num(available)+' <small>รายการ</small>';$('stat-orders').innerHTML=num(state.history.length)+' <small>ใบ</small>';$('stat-cart').innerHTML=num(state.cart.length)+' <small>รายการ</small>';$('nav-history-count').textContent=state.history.length;}
   async function loadWorkspace(){const [inventory,history]=await Promise.all([rpc('getInventoryData',state.user.token),rpc('getMyWithdrawalHistory',state.user.token)]);state.inventory=inventory;state.history=history;updateStats();}
   async function signIn(user){state.user=user;const persisted=VillaAPI.saveSession(user);if(!persisted)toast('เบราว์เซอร์ไม่อนุญาตให้จดจำการเข้าสู่ระบบ เมื่อปิดหน้านี้ต้องเข้าสู่ระบบใหม่',true);updateSessionClock();$('auth').classList.add('hidden');$('shell').classList.remove('hidden');$('user-name').textContent=user.name;$('user-dept').textContent=user.dept+' · '+user.role;$('user-avatar').textContent=user.name.slice(0,2).toUpperCase();$('greeting').textContent='สวัสดี, '+user.name;$('order-dept').textContent=user.dept;document.querySelectorAll('[data-role]').forEach(el=>el.classList.toggle('hidden',el.dataset.role==='admin'?!isAdmin():!isWarehouse()));renderCart();$('notice-dialog').showModal();await loadWorkspace();await navigate('requisition');}
-  function signOut(options={}){const token=state.user?.token;if(options.clear!==false)VillaAPI.clearSession();if(token&&options.revoke!==false)VillaAPI.request('logoutSession',token).catch(()=>{});state.user=null;document.body.classList.remove('printing-order');$('print-order').textContent='';state.editItems=[];state.editRequest=null;state.restockRequest=null;state.cart=[];state.history=[];state.weekly=[];state.selected=null;state.editing=null;state.orderRequest=null;state.inventory=[];document.querySelectorAll('dialog').forEach(d=>d.close());$('shell').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-status').textContent='เข้าสู่ระบบด้วยบัญชี LINE ของพนักงาน';$('product-search').value='';$('selection').classList.add('hidden');['history-search','history-from','history-to','inventory-search','edit-search','weekly-search'].forEach(id=>$(id).value='');$('history-status').value='all';$('weekly-status').value='all';['history-content','inventory-content','daily-content','weekly-content','weekly-overview','edit-items','edit-info','product-results','edit-results','restock-product','legacy-name','legacy-employee','cart-items','user-name','user-dept','session-label','order-dept','greeting'].forEach(id=>$(id).textContent='');closeNav();}
+  function signOut(options={}){const token=state.user?.token;if(options.clear!==false)VillaAPI.clearSession();if(token&&options.revoke!==false)VillaAPI.request('logoutSession',token).catch(()=>{});state.user=null;document.body.classList.remove('printing-order');$('print-order').textContent='';state.editItems=[];state.editRequest=null;state.restockRequest=null;state.cart=[];state.history=[];state.weekly=[];state.selected=null;state.editing=null;state.orderRequest=null;state.inventory=[];document.querySelectorAll('dialog').forEach(d=>d.close());$('shell').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-status').textContent='เข้าสู่ระบบด้วยบัญชี LINE ของพนักงาน';$('product-search').value='';$('selection').classList.add('hidden');['history-search','history-from','history-to','inventory-search','edit-search','weekly-search','restock-product','restock-qty'].forEach(id=>$(id).value='');$('history-status').value='all';$('weekly-status').value='all';['history-content','inventory-content','daily-content','weekly-content','weekly-overview','edit-items','edit-info','product-results','edit-results','restock-product-info','legacy-name','legacy-employee','cart-items','user-name','user-dept','session-label','order-dept','greeting'].forEach(id=>$(id).textContent='');closeNav();}
   function updateSessionClock(){
     if(!state.user)return;
     const remaining=Number(state.user.expiresAt)-Date.now();
@@ -108,14 +108,42 @@
       return `<article class="weekly-card reorder-card"><div class="weekly-top"><div><h2 class="reorder-product">${esc(i.name)}</h2><p class="table-sub">${esc(i.id)} · ${esc(unit)}</p></div><span class="chip ${check?'chip-red':buy?'reorder-chip-buy':'chip-green'}">${badge}</span></div><div class="reorder-quantities"><div><span>เบิกรวม 7 วัน</span><strong>${num(i.totalQty)} <small>${esc(unit)}</small></strong></div><div><span>คงเหลือปัจจุบัน</span><strong>${i.balance===null||i.balance===undefined?'—':num(i.balance)} <small>${esc(unit)}</small></strong></div><div class="reorder-recommendation ${buy?'needs-buy':''}"><span>แนะนำสั่งซื้อ</span><strong>${check?'—':num(i.recommendedQty)} <small>${esc(unit)}</small></strong></div></div><p class="table-sub ${check?'reorder-check':''}">${esc(hint)}</p><details class="reorder-breakdown"><summary>ดูยอดเบิกแยกรายวัน · มีการเบิก ${num(i.daysActive)} วัน</summary><div class="reorder-days">${(i.dailyQty||[]).map(day=>`<div><span>${esc(dateLabel(day.date))}</span><strong>${num(day.qty)}</strong><small>${esc(unit)}</small></div>`).join('')}</div></details></article>`;
     }).join('');
   }
-  async function openRestock(){if(!isAdmin())return;state.inventory=await rpc('getInventoryData',state.user.token);state.restockRequest=null;$('restock-product').innerHTML='<option value="">เลือกสินค้า</option>'+state.inventory.map(i=>`<option value="${esc(i.id)}">${esc(i.name)} · ${esc(i.id)} (${esc(i.unit)})</option>`).join('');$('restock-qty').value='';$('restock-dialog').showModal();}
+  function renderRestockProduct(){
+    const input=$('restock-product'),id=input.value.trim(),item=stock(id),missing=Boolean(id&&!item);
+    input.setCustomValidity(missing?'ไม่พบรหัสสินค้านี้ กรุณาตรวจสอบรหัสอีกครั้ง':'');
+    input.setAttribute('aria-invalid',String(missing));
+    $('restock-submit').disabled=!item||state.busy;
+    $('restock-qty-label').textContent=item?'จำนวนรับเข้า ('+item.unit+')':'จำนวนรับเข้า (ตามหน่วยนับของสินค้า)';
+    $('restock-product-info').classList.toggle('restock-product-error',missing);
+    $('restock-product-info').innerHTML=item?icon('check')+`<div><strong>${esc(item.name)}</strong><br>รหัส ${esc(item.id)} · หน่วย ${esc(item.unit)} · บรรจุ ${esc(item.packSize)}<br>คงเหลือ ${num(item.balance)} ${esc(item.unit)}</div>`:icon('info')+`<span>${missing?'ไม่พบรหัสสินค้า '+esc(id)+' กรุณาตรวจสอบรหัสอีกครั้ง':'กรอกรหัสสินค้าเพื่อดูชื่อและหน่วยนับ'}</span>`;
+    return item;
+  }
+  async function openRestock(){
+    if(!isAdmin())return;
+    state.inventory=await rpc('getInventoryData',state.user.token);state.restockRequest=null;
+    $('restock-product').value='';$('restock-qty').value='';renderRestockProduct();
+    $('restock-dialog').showModal();$('restock-product').focus();
+  }
   $('line-login').addEventListener('click',()=>run(lineLogin));
   $('legacy-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
     const result=await rpc('linkLegacyOwner',{token:state.user.token,legacyName:$('legacy-name').value,employeeId:$('legacy-employee').value});
     $('legacy-dialog').close();toast('เชื่อมประวัติแล้ว '+result.orders+' ใบเบิก');await loadWorkspace();if(state.page==='history')renderHistory();
   },true);});
-  $('restock-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{const qty=validQty($('restock-qty').value);if(!state.restockRequest)state.restockRequest=key();await rpc('processRestock',{token:state.user.token,requestId:state.restockRequest,id:$('restock-product').value,qty});state.restockRequest=null;$('restock-dialog').close();toast('รับพัสดุเข้าสต็อกเรียบร้อยแล้ว');await loadWorkspace();if(state.page==='inventory')renderInventory();},true);});
-  ['restock-product','restock-qty'].forEach(id=>$(id).addEventListener('input',()=>state.restockRequest=null));
+  $('restock-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
+    const item=renderRestockProduct();
+    if(!item){$('restock-product').reportValidity();throw new Error('กรุณาระบุรหัสสินค้าที่มีอยู่ในระบบ');}
+    const qty=validQty($('restock-qty').value);
+    if(!state.restockRequest)state.restockRequest=key();
+    await rpc('processRestock',{token:state.user.token,requestId:state.restockRequest,id:item.id,qty});
+    state.restockRequest=null;$('restock-dialog').close();toast('รับพัสดุเข้าสต็อกเรียบร้อยแล้ว');await loadWorkspace();if(state.page==='inventory')renderInventory();
+  },true);});
+  $('restock-product').addEventListener('input',()=>{state.restockRequest=null;renderRestockProduct();});
+  $('restock-qty').addEventListener('input',()=>state.restockRequest=null);
+  $('restock-product').addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;e.preventDefault();
+    const item=renderRestockProduct();
+    if(item){$('restock-qty').focus();$('restock-qty').select();}else $('restock-product').reportValidity();
+  });
   $('product-search').addEventListener('input',()=>{state.selected=null;$('selection').classList.add('hidden');searchProducts();});$('edit-search').addEventListener('input',()=>searchProducts(true));
   ['product-search','edit-search'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const first=findProducts($(id).value)[0];if(first){try{id==='edit-search'?addEditItem(first.id):selectProduct(first.id);}catch(error){handleError(error);}}}));
   ['history-search','history-from','history-to','history-status'].forEach(id=>$(id).addEventListener('input',renderHistory));$('inventory-search').addEventListener('input',renderInventory);$('weekly-search').addEventListener('input',renderWeekly);$('weekly-status').addEventListener('change',renderWeekly);
