@@ -3,7 +3,7 @@
   const $=id=>document.getElementById(id), icon=name=>`<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const state={user:null,inventory:[],history:[],weekly:[],cart:[],selected:null,page:'requisition',editing:null,editItems:[],busy:false,pending:0,orderRequest:null,editRequest:null,restockRequest:null};
-  let freshLineLogin=false;
+  let freshLineLogin=false,desktopMode=false,qrRequest=null,qrTimer=null,qrGeneration=0,qrApproval=null;
   const titles={requisition:'เบิกพัสดุ',history:'ประวัติการเบิกของฉัน',inventory:'สต็อกคงเหลือ',daily:'ใบจัดของประจำวัน',weekly:'วางแผนสั่งซื้อ'};
   const key=()=>typeof crypto.randomUUID==='function'?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2);
   const role=()=>String(state.user?.role||'').trim().toLowerCase();
@@ -29,8 +29,8 @@
   async function run(task,saving=false){if(state.busy)return;state.busy=true;if(saving)$('busy-overlay').classList.remove('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=true);try{await task();}catch(e){handleError(e);}finally{state.busy=false;$('busy-overlay').classList.add('hidden');document.querySelectorAll('dialog button').forEach(b=>b.disabled=false);if($('restock-dialog').open)renderRestockProduct();}}
   function updateStats(){const available=state.inventory.filter(i=>i.balance>0).length;$('stat-inventory').innerHTML=num(available)+' <small>รายการ</small>';$('stat-orders').innerHTML=num(state.history.length)+' <small>ใบ</small>';$('stat-cart').innerHTML=num(state.cart.length)+' <small>รายการ</small>';$('nav-history-count').textContent=state.history.length;}
   async function loadWorkspace(){const [inventory,history]=await Promise.all([rpc('getInventoryData',state.user.token),rpc('getMyWithdrawalHistory',state.user.token)]);state.inventory=inventory;state.history=history;updateStats();}
-  async function signIn(user){state.user=user;const persisted=VillaAPI.saveSession(user);if(!persisted)toast('เบราว์เซอร์ไม่อนุญาตให้จดจำการเข้าสู่ระบบ เมื่อปิดหน้านี้ต้องเข้าสู่ระบบใหม่',true);updateSessionClock();$('auth').classList.add('hidden');$('shell').classList.remove('hidden');$('user-name').textContent=user.name;$('user-dept').textContent=user.dept+' · '+user.role;$('user-avatar').textContent=user.name.slice(0,2).toUpperCase();$('greeting').textContent='สวัสดี, '+user.name;$('order-dept').textContent=user.dept;document.querySelectorAll('[data-role]').forEach(el=>el.classList.toggle('hidden',el.dataset.role==='admin'?!isAdmin():!isWarehouse()));renderCart();$('notice-dialog').showModal();await loadWorkspace();await navigate('requisition');}
-  function signOut(options={}){const token=state.user?.token;if(options.clear!==false)VillaAPI.clearSession();if(token&&options.revoke!==false)VillaAPI.request('logoutSession',token).catch(()=>{});state.user=null;document.body.classList.remove('printing-order');$('print-order').textContent='';state.editItems=[];state.editRequest=null;state.restockRequest=null;state.cart=[];state.history=[];state.weekly=[];state.selected=null;state.editing=null;state.orderRequest=null;state.inventory=[];document.querySelectorAll('dialog').forEach(d=>d.close());$('shell').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-status').textContent='ออกจากระบบแล้ว กดตรวจสอบบัญชีอีกครั้งเพื่อเข้าใช้งาน';$('line-login').classList.remove('hidden');$('line-login').disabled=false;$('auth-register').classList.add('hidden');$('auth-register').removeAttribute('href');$('product-search').value='';$('selection').classList.add('hidden');['history-search','history-from','history-to','inventory-search','edit-search','weekly-search','restock-product','restock-qty'].forEach(id=>$(id).value='');$('history-status').value='all';$('weekly-status').value='all';['history-content','inventory-content','daily-content','weekly-content','weekly-overview','edit-items','edit-info','product-results','edit-results','restock-product-info','legacy-name','legacy-employee','cart-items','user-name','user-dept','session-label','order-dept','greeting'].forEach(id=>$(id).textContent='');closeNav();}
+  async function signIn(user){state.user=user;const persisted=VillaAPI.saveSession(user);if(!persisted)toast('เบราว์เซอร์ไม่อนุญาตให้จดจำการเข้าสู่ระบบ เมื่อปิดหน้านี้ต้องเข้าสู่ระบบใหม่',true);updateSessionClock();$('auth').classList.add('hidden');$('shell').classList.remove('hidden');$('user-name').textContent=user.name;$('user-dept').textContent=user.dept+' · '+user.role;$('user-avatar').textContent=user.name.slice(0,2).toUpperCase();$('greeting').textContent='สวัสดี, '+user.name;$('order-dept').textContent=user.dept;document.querySelectorAll('[data-role]').forEach(el=>el.classList.toggle('hidden',el.dataset.role==='admin'?!isAdmin():!isWarehouse()));renderCart();stopDesktopQr(false);if(!desktopMode&&!VillaAPI.pendingDesktopApproval())$('notice-dialog').showModal();await loadWorkspace();await navigate(desktopMode&&isWarehouse()?'daily':'requisition');}
+  function signOut(options={}){stopDesktopQr();qrApproval=null;const token=state.user?.token;if(options.clear!==false)VillaAPI.clearSession();if(token&&options.revoke!==false)VillaAPI.request('logoutSession',token).catch(()=>{});state.user=null;document.body.classList.remove('printing-order');$('print-order').textContent='';state.editItems=[];state.editRequest=null;state.restockRequest=null;state.cart=[];state.history=[];state.weekly=[];state.selected=null;state.editing=null;state.orderRequest=null;state.inventory=[];document.querySelectorAll('dialog').forEach(d=>d.close());$('shell').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-status').textContent='ออกจากระบบแล้ว กดตรวจสอบบัญชีอีกครั้งเพื่อเข้าใช้งาน';$('line-login').classList.remove('hidden');$('line-login').disabled=false;$('auth-register').classList.add('hidden');$('auth-register').removeAttribute('href');$('product-search').value='';$('selection').classList.add('hidden');['history-search','history-from','history-to','inventory-search','edit-search','weekly-search','restock-product','restock-qty'].forEach(id=>$(id).value='');$('history-status').value='all';$('weekly-status').value='all';['history-content','inventory-content','daily-content','weekly-content','weekly-overview','edit-items','edit-info','product-results','edit-results','restock-product-info','legacy-name','legacy-employee','cart-items','user-name','user-dept','session-label','order-dept','greeting'].forEach(id=>$(id).textContent='');renderAuthMode();closeNav();}
   function updateSessionClock(){
     if(!state.user)return;
     const remaining=Number(state.user.expiresAt)-Date.now();
@@ -52,7 +52,7 @@
     try{
       const user=await VillaAPI.login({fresh:freshLineLogin});
       freshLineLogin=false;$('line-login-label').textContent='ตรวจสอบบัญชีอีกครั้ง';
-      if(user)await signIn(user);
+      if(user){await signIn(user);await showDesktopApproval();}
       else $('auth-status').textContent='กำลังเปิด LINE เพื่อยืนยันบัญชี…';
     }catch(error){
       if(error.code==='REGISTRATION_REQUIRED'){goRegistration(error);return;}
@@ -63,11 +63,104 @@
       throw error;
     }
   }
+  function preferDesktopLogin(){
+    if(window.liff&&typeof liff.isInClient==='function'&&liff.isInClient())return false;
+    const mode=new URLSearchParams(location.search||'').get('login');
+    if(mode==='qr'||mode==='desktop'||mode==='warehouse')return true;
+    if(mode==='line')return false;
+    // Device detection only chooses the screen; LINE identity and roles are
+    // always verified by the API. Phones retain automatic LINE verification.
+    return typeof window.matchMedia==='function'&&window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  }
+  function renderAuthMode(){
+    $('auth-heading').textContent=desktopMode?'เข้าสู่ระบบบนคอม':'ตรวจสอบข้อมูลพนักงาน';
+    $('auth-description').textContent=desktopMode?'กดตรวจสอบบัญชีอีกครั้ง แล้วสแกน QR ด้วย LINE บนมือถือเพื่อเข้าสู่ระบบ':'ระบบตรวจสอบบัญชี LINE ให้อัตโนมัติ หากยังไม่มีทะเบียน จะพาไปลงทะเบียนที่เว็บเดิม';
+    if(desktopMode){$('line-login').classList.remove('hidden');$('line-login').disabled=false;$('line-login-label').textContent='ตรวจสอบบัญชีอีกครั้ง';}
+  }
+  function stopDesktopQr(cancel=true){
+    qrGeneration++;if(qrTimer!==null)clearTimeout(qrTimer);qrTimer=null;
+    const previous=qrRequest;qrRequest=null;
+    $('desktop-qr-panel').classList.add('hidden');$('desktop-qr-image').innerHTML='';
+    if(previous&&cancel)VillaAPI.request('cancelDesktopLogin',{scanToken:previous.scanToken,desktopToken:previous.desktopToken}).catch(()=>{});
+  }
+  function desktopQrFailed(message){
+    stopDesktopQr();$('auth-status').textContent=message;
+    $('line-login').classList.remove('hidden');$('line-login').disabled=false;
+  }
+  function updateQrClock(){
+    if(!qrRequest)return;
+    const remaining=Number(qrRequest.expiresAt)-Date.now();
+    if(remaining<=0){desktopQrFailed('QR หมดอายุแล้ว กดตรวจสอบบัญชีอีกครั้งเพื่อสร้าง QR ใหม่');return;}
+    $('desktop-qr-status').textContent='รอการยืนยันบนมือถือ · QR เหลือ '+Math.ceil(remaining/1000)+' วินาที';
+  }
+  async function pollDesktopQr(generation){
+    const current=qrRequest;if(!current||generation!==qrGeneration)return;
+    if(Date.now()>=current.expiresAt){updateQrClock();return;}
+    try{
+      const result=await VillaAPI.request('pollDesktopLogin',{scanToken:current.scanToken,desktopToken:current.desktopToken});
+      if(generation!==qrGeneration||current!==qrRequest)return;
+      if(result.status==='complete'){
+        if(result.user?.authMethod!=='qr')throw new Error('ข้อมูลยืนยัน QR ไม่ถูกต้อง');
+        stopDesktopQr(false);try{await signIn(result.user);}catch(error){handleError(error);}return;
+      }
+    }catch(error){
+      if(generation!==qrGeneration||current!==qrRequest)return;
+      if(['QR_EXPIRED','QR_USED','QR_ACCESS_DENIED','ACCESS_DENIED','REGISTRATION_REQUIRED','SESSION_EXPIRED','API_UPDATE_REQUIRED'].includes(error.code)){
+        desktopQrFailed(error.message);return;
+      }
+      $('auth-status').textContent='กำลังเชื่อมต่ออีกครั้ง… หากยืนยันบนมือถือแล้ว กรุณารอ';
+    }
+    if(generation===qrGeneration&&qrRequest)qrTimer=setTimeout(()=>pollDesktopQr(generation),5000);
+  }
+  async function startDesktopQr(){
+    const previous=qrRequest;stopDesktopQr(false);const generation=qrGeneration;
+    $('line-login').disabled=true;$('auth-status').textContent='กำลังสร้าง QR สำหรับคอมเครื่องนี้…';
+    try{
+      const next=await VillaAPI.request('startDesktopLogin',previous?{scanToken:previous.scanToken,desktopToken:previous.desktopToken}:{});
+      if(generation!==qrGeneration){VillaAPI.request('cancelDesktopLogin',{scanToken:next.scanToken,desktopToken:next.desktopToken}).catch(()=>{});return;}
+      qrRequest=next;
+      if(typeof window.qrcode!=='function')throw new Error('โหลดตัวสร้าง QR ไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ');
+      const qr=qrcode(0,'M');qr.addData(VillaAPI.desktopQrUrl(next.scanToken),'Byte');qr.make();
+      $('desktop-qr-image').innerHTML=qr.createSvgTag({cellSize:4,margin:16,scalable:true});
+      $('desktop-qr-code').textContent=next.code;$('desktop-qr-panel').classList.remove('hidden');
+      $('line-login').classList.add('hidden');$('auth-status').textContent='เปิดตัวสแกน QR ใน LINE บนมือถือ แล้วกดยืนยันการเข้าคอม';
+      updateQrClock();qrTimer=setTimeout(()=>pollDesktopQr(generation),5000);
+    }catch(error){desktopQrFailed(error.message||'สร้าง QR ไม่สำเร็จ กรุณาลองอีกครั้ง');throw error;}
+    finally{$('line-login').disabled=false;}
+  }
+  async function showDesktopApproval(){
+    const scanToken=VillaAPI.pendingDesktopApproval();if(!scanToken||!state.user||desktopMode)return;
+    try{
+      const info=await rpc('inspectDesktopLogin',{token:state.user.token,scanToken});
+      qrApproval={scanToken,code:info.code,expiresAt:info.expiresAt};
+      $('qr-approval-name').textContent=state.user.name+' · '+state.user.dept;
+      $('qr-approval-code').textContent=info.code;$('qr-approval-status').textContent='อนุญาตเฉพาะเมื่อคุณเป็นผู้เปิด QR นี้บนคอม';
+      $('qr-approval-confirm').disabled=false;$('qr-approval-dialog').showModal();
+    }catch(error){VillaAPI.finishDesktopApproval();toast(error.message,true);}
+  }
+  function dismissDesktopApproval(){
+    qrApproval=null;VillaAPI.finishDesktopApproval();$('qr-approval-dialog').close();
+  }
+  async function confirmDesktopApproval(){
+    if(!qrApproval)return;
+    if(Date.now()>=qrApproval.expiresAt){dismissDesktopApproval();throw new Error('QR หมดอายุแล้ว กรุณาสร้างใหม่บนคอม');}
+    const current=qrApproval;
+    try{await rpc('approveDesktopLogin',{token:state.user.token,scanToken:current.scanToken,code:current.code});}
+    catch(error){if(['QR_EXPIRED','QR_USED','QR_ACCESS_DENIED'].includes(error.code))dismissDesktopApproval();throw error;}
+    dismissDesktopApproval();toast('ยืนยันสำเร็จ คอมจะเข้าสู่ระบบในสักครู่');
+  }
   async function initializeAuth(){
-    try{VillaAPI.validateConfig();await lineLogin();}
-    catch(error){
+    desktopMode=preferDesktopLogin();renderAuthMode();
+    try{
+      VillaAPI.validateConfig();
+      if(desktopMode){
+        const user=await VillaAPI.restoreDesktopSession();
+        if(user)await signIn(user);else $('auth-status').textContent='กดตรวจสอบบัญชีอีกครั้งเพื่อแสดง QR เข้าสู่ระบบ';
+      }else await lineLogin();
+    }catch(error){
       $('auth-status').textContent=error.message||'ตรวจสอบบัญชีไม่สำเร็จ กรุณาลองใหม่';
-      $('line-login').classList.remove('hidden');$('line-login').disabled=false;handleError(error);
+      $('line-login').classList.remove('hidden');$('line-login').disabled=false;
+      handleError(error);
     }
   }
   async function openLegacy(){
@@ -138,7 +231,12 @@
     $('restock-product').value='';$('restock-qty').value='';renderRestockProduct();
     $('restock-dialog').showModal();$('restock-product').focus();
   }
-  $('line-login').addEventListener('click',()=>run(lineLogin));
+  $('line-login').addEventListener('click',()=>run(desktopMode?startDesktopQr:lineLogin));
+  $('desktop-qr-refresh').addEventListener('click',()=>run(startDesktopQr));
+  $('desktop-qr-cancel').addEventListener('click',()=>desktopQrFailed('ยกเลิก QR แล้ว กดตรวจสอบบัญชีอีกครั้งเพื่อเริ่มใหม่'));
+  $('qr-approval-confirm').addEventListener('click',()=>run(confirmDesktopApproval));
+  $('qr-approval-deny').addEventListener('click',dismissDesktopApproval);
+  $('qr-approval-dialog').addEventListener('cancel',()=>{if(!state.busy)dismissDesktopApproval();});
   $('legacy-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
     const result=await rpc('linkLegacyOwner',{token:state.user.token,legacyName:$('legacy-name').value,employeeId:$('legacy-employee').value});
     $('legacy-dialog').close();toast('เชื่อมประวัติแล้ว '+result.orders+' ใบเบิก');await loadWorkspace();if(state.page==='history')renderHistory();
@@ -177,7 +275,7 @@
     if(action==='open-restock')run(openRestock);if(action==='close-restock')$('restock-dialog').close();if(action==='open-legacy')run(openLegacy);if(action==='close-legacy')$('legacy-dialog').close();if(action==='print')window.print();
   }catch(error){handleError(error);}});
   document.addEventListener('click',e=>{if(!e.target.closest('.search-box'))document.querySelectorAll('.results').forEach(el=>el.classList.add('hidden'));});
-  setInterval(updateSessionClock,1000);
+  setInterval(()=>{updateSessionClock();updateQrClock();},1000);
   window.addEventListener('afterprint',()=>{document.body.classList.remove('printing-order');$('print-order').textContent='';});
   document.addEventListener('visibilitychange',updateSessionClock);
   window.addEventListener('storage',e=>{if(e.key===VillaAPI.sessionKey&&state.user){signOut({clear:false,revoke:false});$('auth-status').textContent='เซสชันเปลี่ยนจากแท็บอื่น กรุณารีเฟรชเพื่อเข้าสู่ระบบ';}});

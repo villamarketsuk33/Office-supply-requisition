@@ -5,18 +5,18 @@
   const sessionKey = 'villa-supplies:session:v3';
   const renewalKey = 'villa-supplies:line-renewal:' + String(config.liffId || '');
   let lineReady;
-  function validateConfig() {
+  function validateConfig(requireLine = true) {
     let url;
     try { url = new URL(String(config.webAppUrl || '').trim()); } catch (_) {}
     if (!url || url.protocol !== 'https:' || url.hostname !== 'script.google.com' ||
         !/^\/macros\/s\/[A-Za-z0-9_-]+\/exec\/?$/.test(url.pathname) || url.search || url.hash)
       throw new Error('กรุณาตั้งค่า webAppUrl ใน config.js ด้วย URL Apps Script ที่ลงท้าย /exec');
-    if (!/^\d+-[A-Za-z0-9]+$/.test(String(config.liffId || '')))
+    if (requireLine && !/^\d+-[A-Za-z0-9]+$/.test(String(config.liffId || '')))
       throw new Error('กรุณาตั้งค่า liffId สำหรับระบบเบิกพัสดุใน config.js');
     return url.href;
   }
   async function request(action, ...args) {
-    const url = validateConfig();
+    const url = validateConfig(false);
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 60000);
     let response;
     try {
@@ -38,7 +38,9 @@
     catch (_) { throw new Error('API ไม่ได้ตอบกลับเป็น JSON กรุณาตรวจ URL /exec และ Deploy เวอร์ชันล่าสุด'); }
     if (!response.ok || !result || typeof result.ok !== 'boolean') throw new Error('API ตอบกลับไม่ถูกต้อง');
     if (action === 'loginWithLine' && args[0]?.accessToken && result.authProtocol !== 'line-access-v1')
-      throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version ให้ URL /exec แสดง version 3.3.0 ก่อนใช้งานหน้าเว็บชุดนี้');
+      throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version ให้ URL /exec แสดง version 3.5.0 ก่อนใช้งานหน้าเว็บชุดนี้');
+    if (['startDesktopLogin','inspectDesktopLogin','approveDesktopLogin','pollDesktopLogin','cancelDesktopLogin'].includes(action) && result.qrProtocol !== 'desktop-qr-v1')
+      throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version 3.5.0 เพื่อใช้ QR บนคอม');
     if (!result.ok) {
       const error = new Error(result.error || 'ทำรายการไม่สำเร็จ');
       error.code = result.code || '';
@@ -57,10 +59,57 @@
   }
   function saveSession(user) {
     // Store only the app session; LINE ID/access tokens are never persisted here.
-    try { localStorage.setItem(sessionKey, JSON.stringify({token:user.token, expiresAt:user.expiresAt})); return true; }
+    try { localStorage.setItem(sessionKey, JSON.stringify({token:user.token, expiresAt:user.expiresAt,...(user.authMethod==='qr'?{authMethod:'qr'}:{})})); return true; }
     catch (_) { return false; }
   }
   function clearSession() { try { localStorage.removeItem(sessionKey); } catch (_) {} }
+  async function restoreDesktopSession() {
+    const saved = readSession();
+    if (saved?.authMethod !== 'qr') { clearSession(); return null; }
+    try {
+      const user = await request('restoreSession', saved.token);
+      if (user.authMethod === 'qr') return user;
+      clearSession();
+      return null;
+    } catch (error) {
+      if (/SESSION_EXPIRED|ACCESS_DENIED|REGISTRATION_REQUIRED/.test(error.code || error.message)) clearSession();
+      throw error;
+    }
+  }
+  const scanKey = 'villa-supplies:qr-approval';
+  let pendingScan = '';
+  function rememberScan() {
+    // Call only after liff.init resolves: LIFF first restores liff.state into
+    // the endpoint URL. Do not edit the URL during LIFF's primary redirect.
+    const scan = new URLSearchParams(location.search || '').get('desktopLogin');
+    if (scan && /^[a-f0-9-]{72}$/i.test(scan)) {
+      pendingScan = scan;
+      try { sessionStorage.setItem(scanKey, JSON.stringify({scan,until:Date.now()+300000})); } catch (_) {}
+    }
+  }
+  function pendingDesktopApproval() {
+    if (pendingScan) return pendingScan;
+    try {
+      const saved=JSON.parse(sessionStorage.getItem(scanKey));
+      if (saved && saved.until>Date.now() && /^[a-f0-9-]{72}$/i.test(saved.scan)) return saved.scan;
+      sessionStorage.removeItem(scanKey);
+    } catch (_) {}
+    return '';
+  }
+  function finishDesktopApproval() {
+    pendingScan = '';
+    try { sessionStorage.removeItem(scanKey); } catch (_) {}
+    try {
+      const url = new URL(location.href);
+      url.searchParams.delete('desktopLogin');
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (_) {}
+  }
+  function desktopQrUrl(scanToken) {
+    validateConfig();
+    if (!/^[a-f0-9-]{72}$/i.test(scanToken)) throw new Error('ข้อมูล QR ไม่ถูกต้อง');
+    return 'https://liff.line.me/' + config.liffId + '?desktopLogin=' + encodeURIComponent(scanToken);
+  }
   function registrationDestination(error) {
     if (error?.code !== 'REGISTRATION_REQUIRED') return null;
     try {
@@ -113,15 +162,18 @@
     if (liff.isLoggedIn()) liff.logout();
     lineReady = null;
     pendingLogin(true);
+    const scan = pendingDesktopApproval();
+    const suffix = scan ? '?desktopLogin=' + encodeURIComponent(scan) : '';
     if (liff.isInClient()) {
-      location.replace('https://liff.line.me/' + config.liffId);
+      location.replace('https://liff.line.me/' + config.liffId + suffix);
     } else {
-      liff.login({redirectUri:location.origin + location.pathname});
+      liff.login({redirectUri:location.origin + location.pathname + suffix});
     }
     return true;
   }
   async function login(options = {}) {
     await initLine();
+    rememberScan();
     if (options.fresh) {
       renewLine(false);
       return null;
@@ -145,5 +197,5 @@
       throw error;
     }
   }
-  window.VillaAPI = {request,validateConfig,readSession,saveSession,clearSession,initLine,login,pendingLogin,registrationDestination,sessionKey};
+  window.VillaAPI = {request,validateConfig,readSession,saveSession,clearSession,initLine,login,restoreDesktopSession,pendingDesktopApproval,finishDesktopApproval,desktopQrUrl,pendingLogin,registrationDestination,sessionKey};
 })();

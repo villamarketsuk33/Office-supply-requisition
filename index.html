@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#122c5c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=3.3.0">
+  <link rel="stylesheet" href="assets/app.css?v=3.5.0">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -40,7 +40,15 @@
       <div class="mini-order" aria-hidden="true"><div class="mini-order-top"><div class="mini-order-icon"><svg><use href="#i-box"/></svg></div><div><strong style="font-size:12px">รายการเบิกพัสดุ</strong><p style="font-size:10px;color:#a2b7d9">ของใช้พร้อมสำหรับวันทำงาน</p></div></div><div class="mini-row"><span>เลือกสินค้า · ระบุจำนวน · ยืนยัน</span><span>จัดการได้ง่าย</span></div></div>
     </div><div class="auth-foot">VILLA MARKET &nbsp; / &nbsp; INTERNAL OPERATIONS</div>
   </section>
-  <section class="auth-form-wrap"><div class="auth-form"><div class="eyebrow muted">EMPLOYEE ACCESS</div><h2>ตรวจสอบข้อมูลพนักงาน</h2><p class="muted small">ระบบตรวจสอบบัญชี LINE ให้อัตโนมัติ<br>หากยังไม่มีทะเบียน จะพาไปลงทะเบียนที่เว็บเดิม</p><button id="line-login" class="btn btn-line hidden" type="button" style="margin-top:28px" disabled><span class="line-mark" aria-hidden="true">LINE</span><span id="line-login-label">ตรวจสอบบัญชีอีกครั้ง</span></button><a id="auth-register" class="btn btn-primary hidden" style="width:100%;margin-top:16px">ไปหน้าลงทะเบียนพนักงาน</a><p id="auth-status" class="small muted" role="status" style="margin-top:16px">กำลังตรวจสอบบัญชี LINE และข้อมูลพนักงาน…</p><div class="auth-bottom">สำหรับพนักงาน Villa Market<br>จดจำการเข้าสู่ระบบเป็นเวลา 1 ชั่วโมง</div></div></section>
+  <section class="auth-form-wrap"><div class="auth-form"><div class="eyebrow muted">EMPLOYEE ACCESS</div><h2 id="auth-heading">ตรวจสอบข้อมูลพนักงาน</h2><p id="auth-description" class="muted small">ระบบตรวจสอบบัญชี LINE ให้อัตโนมัติ<br>หากยังไม่มีทะเบียน จะพาไปลงทะเบียนที่เว็บเดิม</p><button id="line-login" class="btn btn-line hidden" type="button" style="margin-top:28px" disabled><span class="line-mark" aria-hidden="true">LINE</span><span id="line-login-label">ตรวจสอบบัญชีอีกครั้ง</span></button><div id="desktop-qr-panel" class="qr-panel hidden">
+  <div class="qr-panel-heading"><span class="dot"></span> สแกนด้วย LINE บนมือถือ</div>
+  <div id="desktop-qr-image" class="qr-image" role="img" aria-label="QR สำหรับเข้าสู่ระบบบนคอม"></div>
+  <p class="small muted">ตรวจว่ารหัสบนมือถือและคอมตรงกัน</p>
+  <strong id="desktop-qr-code" class="qr-code"></strong>
+  <p id="desktop-qr-status" class="small muted" role="status" aria-live="polite"></p>
+  <button id="desktop-qr-refresh" type="button" class="btn btn-small">สร้าง QR ใหม่</button>
+  <button id="desktop-qr-cancel" type="button" class="btn btn-small">ยกเลิก</button>
+</div><a id="auth-register" class="btn btn-primary hidden" style="width:100%;margin-top:16px">ไปหน้าลงทะเบียนพนักงาน</a><p id="auth-status" class="small muted" role="status" style="margin-top:16px">กำลังตรวจสอบบัญชี LINE และข้อมูลพนักงาน…</p><div class="auth-bottom">สำหรับพนักงาน Villa Market<br>จดจำการเข้าสู่ระบบเป็นเวลา 1 ชั่วโมง</div></div></section>
 </div>
 <div id="shell" class="shell hidden">
   <div id="scrim" class="scrim" data-action="close-nav"></div>
@@ -72,6 +80,11 @@
     <footer class="page-foot"><span>VILLA MARKET · SUPPLIES DESK</span><span>พร้อมสำหรับทุกวันทำงาน</span></footer>
   </main></div>
 </div>
+<dialog id="qr-approval-dialog" aria-labelledby="qr-approval-title">
+  <div class="dialog-head"><h2 id="qr-approval-title">ยืนยันการเข้าระบบบนคอม</h2></div>
+  <div class="dialog-content qr-approval-content"><p>กำลังอนุญาตให้คอมใช้บัญชีของ</p><strong id="qr-approval-name"></strong><p class="small muted">ตรวจว่ารหัสนี้ตรงกับหน้าคอมที่คุณกำลังใช้งาน</p><strong id="qr-approval-code" class="qr-code"></strong><p id="qr-approval-status" class="small muted" role="status"></p></div>
+  <div class="dialog-footer"><button id="qr-approval-deny" type="button" class="btn">ยกเลิก</button><button id="qr-approval-confirm" type="button" class="btn btn-primary">อนุญาตให้คอมเข้าสู่ระบบ</button></div>
+</dialog>
 <dialog id="notice-dialog" aria-labelledby="notice-title" aria-describedby="notice-description">
   <div class="notice-heading"><div class="notice-modal-icon"><svg aria-hidden="true"><use href="#i-info"/></svg></div><h2 id="notice-title">โปรดทราบ</h2><p id="notice-description">การเบิกของใช้สำนักงาน</p></div>
   <div class="dialog-content"><div class="notice-rule"><span class="step-number" aria-hidden="true">1</span><div>ให้เบิกก่อน <strong>07.30 น.</strong></div></div><div class="notice-rule"><span class="step-number" aria-hidden="true">2</span><div>คลังสินค้าจะจัดของให้ไม่เกิน<br><strong>08.00 น.</strong> ของทุกวัน</div></div><div class="notice-rule"><span class="step-number" aria-hidden="true">3</span><div>เบิกได้ <strong>รอบเดียวใน 1 วัน</strong></div></div></div>
@@ -83,9 +96,10 @@
 <dialog id="legacy-dialog" aria-labelledby="legacy-title"><form id="legacy-form"><div class="dialog-head"><div><h2 id="legacy-title">เชื่อมประวัติการเบิกเดิม</h2><p class="subtitle">ให้พนักงานเข้าถึงรายการเดิมผ่านบัญชี LINE</p></div><button type="button" class="icon-btn" data-action="close-legacy" aria-label="ปิด"><svg><use href="#i-close"/></svg></button></div><div class="dialog-content"><div class="field"><label for="legacy-name">ชื่อผู้เบิกที่บันทึกไว้เดิม</label><select class="control" id="legacy-name" required></select></div><div class="field" style="margin-top:18px"><label for="legacy-employee">เชื่อมกับพนักงาน</label><select class="control" id="legacy-employee" required></select></div><p class="small muted" style="margin-top:18px">รายการของชื่อเดิมที่ยังไม่ได้เชื่อมทั้งหมดจะเป็นของพนักงานที่เลือก กรุณาตรวจรหัสพนักงานและแผนกให้ตรงกัน</p></div><div class="dialog-footer" style="justify-content:flex-end"><button class="btn btn-primary" type="submit">ยืนยันเชื่อมประวัติ</button></div></form></dialog>
 <section id="print-order" aria-label="ใบเบิกพัสดุสำหรับพิมพ์"></section>
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
-<script src="config.js?v=3.3.0"></script>
+<script src="config.js?v=3.5.0"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="assets/api.js?v=3.3.0"></script>
-<script src="assets/app.js?v=3.3.0"></script>
+<script src="assets/vendor/qrcode.js?v=2.0.4"></script>
+<script src="assets/api.js?v=3.5.0"></script>
+<script src="assets/app.js?v=3.5.0"></script>
 </body>
 </html>
