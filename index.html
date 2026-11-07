@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#122c5c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=3.5.0">
+  <link rel="stylesheet" href="assets/app.css?v=3.6.0">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -72,10 +72,10 @@
     <section id="page-daily" class="page hidden"><div class="page-heading"><div><h1 class="section-title">ใบจัดของประจำวัน</h1><p class="subtitle">ยอดเบิกล่าสุดของวันนี้ แยกตามแผนก</p></div><button class="btn btn-navy btn-small" data-action="print"><svg style="width:15px"><use href="#i-print"/></svg>พิมพ์ใบจัดของ</button></div><div class="print-title"><h2>Villa Market — ใบจัดของประจำวัน</h2><p class="date-short"></p></div><div id="daily-content"></div></section>
     <section id="page-weekly" class="page hidden">
       <div class="page-heading"><div><h1 class="section-title">วางแผนสั่งซื้อพัสดุ</h1><p class="subtitle">รวมยอดเบิกรายวันย้อนหลัง 7 วัน รวมวันนี้</p></div><span class="chip">สำหรับ Admin</span></div>
-      <div class="notice" style="margin-bottom:18px"><svg><use href="#i-info"/></svg><div><strong>แนะนำสั่งซื้อ = ยอดเบิกรวม 7 วัน − สต็อกคงเหลือ</strong><br>ใช้ยอดรวมจริง ไม่หาร 7 · หากสต็อกเพียงพอ แนะนำสั่ง 0 · จำนวนตามหน่วยเบิกของสินค้า</div></div>
+      <div class="notice" style="margin-bottom:18px"><svg><use href="#i-info"/></svg><div><strong>แนะนำสั่งซื้อ = พาร์เป้าหมาย − สต็อกคงเหลือ</strong><br>กำหนดพาร์ใน Inventory คอลัมน์ K · ถ้าเว้นว่าง ใช้ยอดเบิกรวม 7 วันแทน ไม่หาร 7 · สต็อกเพียงพอ แนะนำสั่ง 0</div></div>
       <div class="reorder-overview" id="weekly-overview" aria-live="polite"></div>
-      <div class="card"><div class="filterbar"><div class="field"><label for="weekly-search">ค้นหาพัสดุ</label><div class="input-icon"><svg><use href="#i-search"/></svg><input class="control" id="weekly-search" placeholder="ชื่อสินค้า หรือรหัสพัสดุ" autocomplete="off"></div></div><div class="field"><label for="weekly-status">รายการที่ต้องการดู</label><select class="control" id="weekly-status"><option value="all">ทุกรายการที่มีการเบิก</option><option value="buy">แนะนำให้สั่งซื้อ</option><option value="enough">สต็อกเพียงพอ</option><option value="check">ต้องตรวจสอบสต็อก</option></select></div></div><div id="weekly-content"></div></div>
-      <p class="subtitle" style="margin-top:14px">ยอดแนะนำใช้ช่วยตัดสินใจ ยังไม่ได้ออกใบสั่งซื้อหรือเพิ่มสต็อก · กดรีเฟรชเพื่อคำนวณจากยอดล่าสุด</p>
+      <div class="card"><div class="filterbar"><div class="field"><label for="weekly-search">ค้นหาพัสดุ</label><div class="input-icon"><svg><use href="#i-search"/></svg><input class="control" id="weekly-search" placeholder="ชื่อสินค้า หรือรหัสพัสดุ" autocomplete="off"></div></div><div class="field"><label for="weekly-status">รายการที่ต้องการดู</label><select class="control" id="weekly-status"><option value="all">ทุกรายการที่มีพาร์หรือยอดเบิก</option><option value="buy">แนะนำให้สั่งซื้อ</option><option value="enough">สต็อกเพียงพอ</option><option value="check">ต้องตรวจสอบข้อมูล</option></select></div></div><div id="weekly-content"></div></div>
+      <p class="subtitle" style="margin-top:14px">พาร์เป็นจำนวนตามหน่วยเบิก ปรับได้ที่คอลัมน์ K และไม่เปลี่ยนตามรอบตัดยอด · ยอดแนะนำยังไม่ได้ออกใบสั่งซื้อหรือเพิ่มสต็อก · กดรีเฟรชเพื่อคำนวณจากยอดล่าสุด</p>
     </section>
     <footer class="page-foot"><span>VILLA MARKET · SUPPLIES DESK</span><span>พร้อมสำหรับทุกวันทำงาน</span></footer>
   </main></div>
@@ -96,10 +96,10 @@
 <dialog id="legacy-dialog" aria-labelledby="legacy-title"><form id="legacy-form"><div class="dialog-head"><div><h2 id="legacy-title">เชื่อมประวัติการเบิกเดิม</h2><p class="subtitle">ให้พนักงานเข้าถึงรายการเดิมผ่านบัญชี LINE</p></div><button type="button" class="icon-btn" data-action="close-legacy" aria-label="ปิด"><svg><use href="#i-close"/></svg></button></div><div class="dialog-content"><div class="field"><label for="legacy-name">ชื่อผู้เบิกที่บันทึกไว้เดิม</label><select class="control" id="legacy-name" required></select></div><div class="field" style="margin-top:18px"><label for="legacy-employee">เชื่อมกับพนักงาน</label><select class="control" id="legacy-employee" required></select></div><p class="small muted" style="margin-top:18px">รายการของชื่อเดิมที่ยังไม่ได้เชื่อมทั้งหมดจะเป็นของพนักงานที่เลือก กรุณาตรวจรหัสพนักงานและแผนกให้ตรงกัน</p></div><div class="dialog-footer" style="justify-content:flex-end"><button class="btn btn-primary" type="submit">ยืนยันเชื่อมประวัติ</button></div></form></dialog>
 <section id="print-order" aria-label="ใบเบิกพัสดุสำหรับพิมพ์"></section>
 <div class="toast-stack" id="toasts" aria-live="polite"></div>
-<script src="config.js?v=3.5.0"></script>
+<script src="config.js?v=3.6.0"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="assets/vendor/qrcode.js?v=2.0.4"></script>
-<script src="assets/api.js?v=3.5.0"></script>
-<script src="assets/app.js?v=3.5.0"></script>
+<script src="assets/api.js?v=3.6.0"></script>
+<script src="assets/app.js?v=3.6.0"></script>
 </body>
 </html>

@@ -47,6 +47,8 @@
       if (result.code === 'REGISTRATION_REQUIRED') error.registrationUrl = result.registrationUrl;
       throw error;
     }
+    if (action === 'getWeeklyWithdrawalReport' && result.reorderProtocol !== 'par-k-v1')
+      throw authError('API_UPDATE_REQUIRED', 'กรุณาแทนที่ Code.gs และ Deploy New version 3.6.0 เพื่อคำนวณพาร์จาก Inventory คอลัมน์ K');
     return result.data;
   }
   function readSession() {
