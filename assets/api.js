@@ -41,6 +41,8 @@
       throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version ให้ URL /exec แสดง version 3.5.0 ก่อนใช้งานหน้าเว็บชุดนี้');
     if (['startDesktopLogin','inspectDesktopLogin','approveDesktopLogin','pollDesktopLogin','cancelDesktopLogin'].includes(action) && result.qrProtocol !== 'desktop-qr-v1')
       throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version 3.5.0 เพื่อใช้ QR บนคอม');
+    if (['getWarehouseOrders','saveFulfillment','retryReadyNotification'].includes(action) && result.fulfillmentProtocol !== 'warehouse-v1')
+      throw authError('API_UPDATE_REQUIRED', 'กรุณาแทนที่ Code.gs และ Deploy New version 3.7.0 เพื่อบันทึกจำนวนจัดจริงและแจ้งพร้อมรับ');
     if (!result.ok) {
       const error = new Error(result.error || 'ทำรายการไม่สำเร็จ');
       error.code = result.code || '';

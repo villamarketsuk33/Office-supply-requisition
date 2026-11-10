@@ -39,3 +39,5 @@
 .qr-approval-content{text-align:center;line-height:1.9}
 .qr-approval-content .small{margin-top:16px}
 @media print{#qr-approval-dialog,.qr-panel{display:none!important}}
+
+.warehouse-card{margin-bottom:20px;overflow:hidden}.fulfillment-qty{width:112px;text-align:right;display:inline-block}.warehouse-footer{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line)}.warehouse-footer p{margin-top:5px;max-width:650px}.warehouse-actions{display:flex;gap:9px}.warehouse-warning{padding:12px 22px;color:var(--red);background:#fff4f5;font-size:12px}.print-actual{display:none}@media(max-width:700px){.warehouse-footer{align-items:flex-start;flex-direction:column;padding:16px}.warehouse-actions{width:100%}.warehouse-actions .btn{flex:1}.fulfillment-qty{width:90px}.warehouse-card .card-head{align-items:flex-start;gap:10px}.warehouse-card .card-head h2{font-size:15px}}@media print{.print-actual{display:inline}.warehouse-card{break-inside:avoid;border:0;margin-bottom:22px}.warehouse-footer{padding:12px 0}.warehouse-card .card-head{padding:0 0 12px}.warehouse-warning{color:black;background:white}}
