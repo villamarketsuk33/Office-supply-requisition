@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#122c5c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=3.9.1">
+  <link rel="stylesheet" href="assets/app.css?v=3.9.0">
   <link rel="stylesheet" href="assets/labels.css?v=3.8.0">
 </head>
 <body>
@@ -98,9 +98,9 @@
     <section id="page-dc" class="page hidden">
       <div class="page-heading"><div><h1 class="section-title">เบิกจาก DC รายสัปดาห์</h1><p class="subtitle">เลือกสินค้า ระบุจำนวน และติดตามใบเบิกของคุณในแต่ละรอบ</p></div><span class="chip">WEEKLY · DC</span></div>
       <div class="card dc-week-picker"><div class="field"><label for="dc-week">เลือกวันที่ในสัปดาห์ที่ต้องการเบิก</label><input id="dc-week" class="control" type="date"></div><div><strong id="dc-week-label"></strong><p class="small muted">รอบวันจันทร์–วันอาทิตย์ · อิงเวลาประเทศไทย</p></div><button type="button" class="btn btn-small" data-action="dc-refresh">รีเฟรชใบเบิก</button></div>
-      <div class="notice"><svg><use href="#i-info"/></svg><span>จำนวน 1 = 1 แพ็กใหญ่ตามขนาดบรรจุ DC · เมื่อรับของให้แตกแพ็ก แล้วบันทึกรับเข้าสต็อกเป็นจำนวนหน่วยย่อยเดิม</span></div>
-      <div class="order-grid"><div class="card"><div class="card-head"><h2>ค้นหาพัสดุจากทะเบียน</h2><span class="chip">01 / เลือกสินค้า</span></div><div class="card-body"><label class="small muted" for="dc-search">รหัสสินค้า หรือชื่อสินค้า</label><div class="search-box" style="margin-top:9px"><div class="input-icon"><svg><use href="#i-search"/></svg><input id="dc-search" class="control" placeholder="พิมพ์ชื่อ / สแกนรหัส แล้วกด Enter" autocomplete="off"></div><div id="dc-results" class="results hidden"></div></div><p class="small muted" style="margin-top:20px">ใช้ขนาดบรรจุจาก Inventory คอลัมน์ L<br>จำนวนที่กรอกนับเป็นแพ็กใหญ่ DC เช่น ต้องการ 2 ลัง ให้กรอก 2<br>สั่งเบิกได้แม้สต็อกสำนักงานคงเหลือ 0</p></div></div>
-      <div class="card"><div class="card-head"><div><h2 id="dc-editor-title">รายการเบิก DC</h2><p id="dc-editor-owner" class="table-sub"></p></div><span id="dc-cart-count" class="chip">0 รายการ</span></div><div id="dc-cart" class="card-body"></div><div id="dc-pack-review" class="dc-pack-review hidden"><strong>ขนาดบรรจุเปลี่ยน กรุณาตรวจจำนวนใหม่</strong><p class="small">จำนวนเดิมยังไม่ได้แปลงเป็นแพ็กใหญ่ DC ให้ตรวจและแก้จำนวนทุกรายการด้านล่างก่อนบันทึก</p><ul id="dc-pack-review-info"></ul><label><input type="checkbox" id="dc-pack-confirm"> ตรวจแล้ว จำนวนที่กรอกเป็นจำนวนแพ็กใหญ่ DC ตามขนาดใหม่</label></div><div class="cart-footer"><button type="button" id="dc-submit" class="btn btn-primary" data-action="dc-submit" disabled>ยืนยันใบเบิก DC</button><button type="button" id="dc-discard" class="btn hidden" data-action="dc-discard" style="margin-top:9px">ล้าง / ปิดการแก้ไข</button></div></div></div>
+      <div class="notice"><svg><use href="#i-info"/></svg><span>ใบเบิกนี้ใช้รวมความต้องการสั่งจาก DC เมื่อได้รับสินค้าให้บันทึกใน “รับพัสดุเข้าสต็อก” ตามจำนวนรับจริง</span></div>
+      <div class="order-grid"><div class="card"><div class="card-head"><h2>ค้นหาพัสดุจากทะเบียน</h2><span class="chip">01 / เลือกสินค้า</span></div><div class="card-body"><label class="small muted" for="dc-search">รหัสสินค้า หรือชื่อสินค้า</label><div class="search-box" style="margin-top:9px"><div class="input-icon"><svg><use href="#i-search"/></svg><input id="dc-search" class="control" placeholder="พิมพ์ชื่อ / สแกนรหัส แล้วกด Enter" autocomplete="off"></div><div id="dc-results" class="results hidden"></div></div><p class="small muted" style="margin-top:20px">กดเพิ่มสินค้าแล้วใส่จำนวนได้ทันที<br>สั่งเบิกจาก DC ได้แม้สต็อกสำนักงานคงเหลือ 0</p></div></div>
+      <div class="card"><div class="card-head"><div><h2 id="dc-editor-title">รายการเบิก DC</h2><p id="dc-editor-owner" class="table-sub"></p></div><span id="dc-cart-count" class="chip">0 รายการ</span></div><div id="dc-cart" class="card-body"></div><div class="cart-footer"><button type="button" id="dc-submit" class="btn btn-primary" data-action="dc-submit" disabled>ยืนยันใบเบิก DC</button><button type="button" id="dc-discard" class="btn hidden" data-action="dc-discard" style="margin-top:9px">ล้าง / ปิดการแก้ไข</button></div></div></div>
       <div class="card dc-history-card"><div class="card-head"><h2>ใบเบิก DC ของฉันในรอบนี้</h2><span id="dc-history-count" class="chip">0 ใบ</span></div><div id="dc-history" class="history-list"></div></div>
     </section>
     <section id="page-dc-summary" class="page hidden">
@@ -133,8 +133,8 @@
 <script src="config.js?v=3.7.0"></script>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="assets/vendor/qrcode.js?v=2.0.4"></script>
-<script src="assets/api.js?v=3.9.1"></script>
-<script src="assets/dc-weekly.js?v=3.9.1"></script>
-<script src="assets/app.js?v=3.9.1"></script>
+<script src="assets/api.js?v=3.9.0"></script>
+<script src="assets/dc-weekly.js?v=3.9.0"></script>
+<script src="assets/app.js?v=3.9.0"></script>
 </body>
 </html>
