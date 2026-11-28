@@ -43,6 +43,8 @@
       throw authError('API_UPDATE_REQUIRED', 'กรุณาอัปเดต Code.gs และ Deploy New version 3.5.0 เพื่อใช้ QR บนคอม');
     if (['getWarehouseOrders','saveFulfillment','retryReadyNotification'].includes(action) && result.fulfillmentProtocol !== 'warehouse-v1')
       throw authError('API_UPDATE_REQUIRED', 'กรุณาแทนที่ Code.gs และ Deploy New version 3.7.0 เพื่อบันทึกจำนวนจัดจริงและแจ้งพร้อมรับ');
+    if (['getMyDCOrders','saveMyDCOrder','getDCWeeklySummary'].includes(action) && result.dcProtocol !== 'dc-weekly-v1')
+      throw authError('API_UPDATE_REQUIRED', 'กรุณาแทนที่ Code.gs และ Deploy New version 3.9.0 เพื่อใช้ใบเบิก DC รายสัปดาห์');
     if (!result.ok) {
       const error = new Error(result.error || 'ทำรายการไม่สำเร็จ');
       error.code = result.code || '';
